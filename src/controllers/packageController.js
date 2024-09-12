@@ -506,7 +506,13 @@ const buyPackage = async (body) => {
 const getPackages = async (req, res) => {
 
     try {
-        const data = await getPackagesService();
+        let query = {}
+        if (req.query.showAll) query = { stockQty: { $gt: 0 } }
+        
+        console.log(query);
+        
+
+        const data = await getPackagesService(query);
         return res.json({ success: true, message: data })
 
     } catch (error) {
