@@ -8,7 +8,19 @@ const { validateAll } = require('../utils/validate');
 
 const getTeamMembersRevenueEarnings = async (req, res) => {
 
-    const userID = req.user._id;
+    let userID;
+    if (req.user.role == "admin") {
+        const { qUser } = req.query
+        if (qUser && qUser !== "" && qUser !== null && typeof qUser !== undefined) {
+            userID = qUser
+        }
+    }
+    else {
+        userID = req.user._id;
+    }
+
+console.log("userIDuserIDuserID",userID);
+
 
     try {
 
@@ -243,9 +255,23 @@ function calculateDescendantInvestment(_id, data, level = 4) {
 
 const revenueCalculations = async (req, res) => {
     try {
+
+        let userID;
+        
+        if (req.user.role == "admin") {
+            const { qUser } = req.query
+            if (qUser && qUser !== "" && qUser !== null && typeof qUser !== undefined) {
+                userID = qUser
+            }
+        }
+        else {
+            userID = req.user._id;
+        }
+        console.log("userIDuser-----------",userID);
+
         const data = await getUsersService()
         //   const idToCheck = '6699369fba930f6a17d86314';
-        const idToCheck = req.user._id;
+        const idToCheck = userID;
 
         if (data.length > 0) {
             const totalInvestment = calculateDescendantInvestment(idToCheck, data);
@@ -253,8 +279,7 @@ const revenueCalculations = async (req, res) => {
 
             return res.status(200).json({ success: true, message: totalInvestment })
         }
-        else
-        {
+        else {
             throw "No data"
         }
     }

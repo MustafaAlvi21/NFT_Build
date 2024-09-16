@@ -6,7 +6,7 @@ const { authenticateWalletAddress } = require('../middleware/authenticate');
 const { decryptUser } = require('../middleware/decryptUser');
 
 // CONTROLLERS
-const { authenticateUser, getUser, updateUser, getLoginUser, getAdminReferralCode } = require('../controllers/userController');
+const { authenticateUser, getUser, updateUser, getLoginUser, getAdminReferralCode,getAllUsers,getMLMUser } = require('../controllers/userController');
 
 router.get('/', getUser)
 
@@ -19,6 +19,11 @@ router.patch('/', updateUser)
 
 // Admin Area
 router.get('/get-admin-referral', getAdminReferralCode)
+
+router.get("/get-all-users",getAllUsers)
+
+router.post("/getMLMUser",getMLMUser)
+
 
 
 module.exports = router

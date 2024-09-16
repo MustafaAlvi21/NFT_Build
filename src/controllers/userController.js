@@ -199,7 +199,51 @@ const getAdminReferralCode = async (req, res) => {
 
 
 
+const getAllUsers = async (req, res) => {
+    try {
+        const response = await getUsersService({ role: "user" })
+        if(response.length>0)
+        {
+            return res.status(200).json({ success: true, message: response })
+        }
+        else
+        {
+            throw "no user found"
+        }
+    }
+    catch (e) {
+        console.log(e);
+        return res.status(400).json({ success: false, message: e })
+    }
+}
+
+
+
+const getMLMUser = async (req,res)=>{
+    try {
+        console.log("useeeeerrrrrrrrr");
+        
+        const response = await getSingleUserService({ _id: req.body._id })
+        if(response!==null)
+        {
+            return res.status(200).json({ success: true, message: response })
+        }
+        else
+        {
+            throw "no user found"
+        }
+    }
+    catch (e) {
+        console.log(e);
+        return res.status(400).json({ success: false, message: e })
+    }
+}
+
+
+
 module.exports = {
+    getMLMUser,
+    getAllUsers,
     getUser,
     authenticateUser,
     updateUser,
