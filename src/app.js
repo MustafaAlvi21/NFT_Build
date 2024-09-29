@@ -100,6 +100,10 @@ app.use('/commission-log', commissionLogRoute);
 const teamMembers = require('./routes/teamMembers');
 app.use('/team-members', teamMembers);
 
+// GENERAL ROUTE
+const generalData = require('./routes/generalController');
+app.use('/general', generalData);
+
 
 
 

@@ -6,6 +6,8 @@ const packageSchema = mongoose.Schema({
     price: { type: Number, required: true },
     stockQty: { type: Number, required: true },
     description: { type: String, required: true },
+    description2: { type: String, required: true, default: null },
+    description3: { type: String, required: true, default: null },
     URI: { type: String, required: true },
 
 

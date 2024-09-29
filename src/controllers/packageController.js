@@ -592,6 +592,8 @@ const createPackage = async (req, res) => {
             price: req.body.packagePrice,
             stockQty: req.body.packageQuantity,
             description: req.body.packageDescription,
+            description2: req.body.packageDescription2,
+            description3: req.body.packageDescription3,
             URI: req.body.packageURI,
             packageURI: req.body.packageURI,
             uniqueId: req.body.uniqueId,
@@ -611,13 +613,8 @@ const createPackage = async (req, res) => {
         const foundPackage = await getSinglePackageService({ name: packageData.name });
         const foundPackagebyUniqueId = await getSinglePackageService({ uniqueId: req.body.uniqueId });
 
-        if (foundPackage) {
-            throw "Package Already Exists";
-        }
-
-        if (foundPackagebyUniqueId) {
-            throw "Unique Id Already Exists";
-        }
+        if (foundPackage) throw "Package Already Exists";
+        if (foundPackagebyUniqueId) throw "Unique Id Already Exists";
 
         const response = await Create_Package(packageData.name, packageData.packageURI, packageData.stockQty); // Replace with your actual function
 
@@ -633,6 +630,8 @@ const createPackage = async (req, res) => {
         } else {
             throw "Error while creating Package";
         }
+        
+
     } catch (error) {
         console.error(error);
         return res.status(400).json({ success: false, message: error });
@@ -793,6 +792,16 @@ const editPackage = async (req, res) => {
         if (req.body.description || req.body.description !== "" || req.body.description !== null || typeof req.body.description !== undefined) {
             console.log("packageData.description", req.body.packageDescription);
             packageData.description = req.body.packageDescription
+        }
+
+        if (req.body.description2 || req.body.description2 !== "" || req.body.description2 !== null || typeof req.body.description2 !== undefined) {
+            console.log("packageData.description2", req.body.packageDescription2);
+            packageData.description2 = req.body.packageDescription2
+        }
+
+        if (req.body.description3 || req.body.description3 !== "" || req.body.description3 !== null || typeof req.body.description3 !== undefined) {
+            console.log("packageData.description3", req.body.packageDescription3);
+            packageData.description3 = req.body.packageDescription3
         }
 
         if (req.body.packageURI || req.body.packageURI !== "" || req.body.packageURI !== null || typeof req.body.packageURI !== undefined) {
