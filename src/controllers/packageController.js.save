@@ -1,0 +1,574 @@
+const mongoose = require('mongoose');
+
+// QUERY SERVICES
+const { getPackagesService, getSinglePackageService, createPackageService, updatePackageService, countPackagesService } = require('../services/package-services')
+const { updateUserService, getSingleUserService, createUserService } = require('../services/user-services')
+const { createLogService, getLatestDepositLog, getLogsService, updateDepositLog } = require('../services/log-services');
+const { getComissionLevelService } = require('../services/comissionLevel-services');
+
+// HELPERS UTILITY FUNCTIONS
+const { validateAll } = require('../utils/validate');
+const { createCommissionLogService } = require('../services/comission-log-service');
+
+// SHORT UNIQUE ID GENERATOR PACKAGE
+const ShortUniqueId = require('short-unique-id');
+
+const axios = require("axios");
+const { MintNFT, getGas } = require('../utils/web3');
+
+// GetAllPackages()
+
+// PLISIO
+const url = process.env.Plisio_url
+const callback_url = process.env.Callback_url
+const API_Key = process.env.Plisio_API_Key
+
+/**
+ * Minimum Amount for:
+ *  -> ETH: 0.071675750373430750
+ * 
+ * Order number should be unique
+ */
+
+// CREATE NEW INVOICE
+const createInvoice = async (req, res) => {
+    const data = req.body;
+
+    try {
+        const log = await getLatestDepositLog();
+        let order_number = log ? log.details.order_number : 0
+
+        if (isNaN(order_number)) order_number = 0;
+
+        const packageAvailable = await getSinglePackageService({ _id: data.packageID })
+        if (!packageAvailable) throw "Package not found";
+        if (parseInt(packageAvailable.stockQty) - parseInt(data.qty) < 0) throw "Insufficient stock for this Package";
+        const amount = parseInt(packageAvailable.price) * parseInt(data.qty)
+
+        const query = {
+            // email: USER.email,
+            // currency: "USDT_BSC",
+            currency: "USDT",
+            source_amount: amount,
+            source_currency: "USD",
+            order_name: "NFT Proect",
+            order_number: parseInt(order_number) + 1,
+            description: "Balance Top Up",
+            callback_url: `${callback_url}/packages/plisio-webhook?json=true`,
+            success_callback_url: `${req.headers.origin}/deposit-success`,
+            fail_callback_url: `${req.headers.origin}/deposit`,
+            expire_min: "40",
+        }
+
+        console.log("query", query);
+
+        await axios.get(`${url}/invoices/new`, { params: { api_key: API_Key, ...query } })
+            .then(result => {
+                console.log(result?.data);
+
+                createLogService({
+                    userID: "",
+                    action: "deposit",
+                    details: {
+                        walletAddress: data.walletAddress,
+                        referredBy: data.referredBy || "",
+                        amount: amount,
+                        qty: parseInt(data.qty),
+                        packageID: data.packageID,
+                        status: "pending",
+                        order_number: parseInt(order_number) + 1,
+                        TX_URL: result?.data.data.txn_id,
+                        currency: null,
+                        invoice: result?.data.data.invoice_url,
+                        mint: false
+                    }
+                })
+
+                return res.json({ success: true, message: result.data })
+            })
+            .catch(err => { throw err })
+
+    } catch (error) {
+        console.log("error.response");
+        console.log(error.response);
+        return res.status(400).json({ success: false, message: error })
+    }
+}
+
+
+const plisioWebhook = async (req, res) => {
+
+    console.log("/plisio-webhook", req.body);
+    console.log("req.query", req.query);
+    console.log("req.params", req.params);
+    console.log();
+    console.log();
+
+    const data = req.body;
+    const query = { "details.order_number": Number(data.order_number) }
+
+    try {
+        await getLogsService(query)
+            .then(async log => {
+                console.log(log);
+
+                if (log.length == 0) throw "log not found for order #" + data.order_number;
+
+                if (log[0].details.status == "deposited") {
+                    res.writeHead(422);
+                    res.end('Incorrect data 1');
+                    return
+                }
+
+                if (data.status == "pending") {
+                    await updateDepositLog(query, { $set: { 'details.amount': parseFloat(data.source_amount) } })
+                }
+                else if (data.status == 'completed' || data.status == 'mismatch') {
+                    /**
+                     * use data.amount for status -> mismatch
+                     * use data.source_amount for status -> completed
+                     */
+
+                    let newAmount = 0;
+
+                    if (data.status == 'completed') {
+                        newAmount = data.source_amount;
+
+                        const Mint = await MintNFT(log[0].details.walletAddress, log[0].details.packageID, log[0].details.qty)
+                        if (Mint.success) {
+                            console.log(Mint.msg);
+                            await updateDepositLog(query, { "mint": true })
+
+                        } else {
+                            console.log(Mint.error);
+                        }
+
+
+
+
+
+                        await updateDepositLog(query, {
+                            "details.status": "deposited",
+                            "details.currency": data.currency,
+                            "details.amount": newAmount
+                        })
+                            .then(async (data22) => {
+
+                                await buyPackage({
+                                    packageID: log[0].details.packageID,
+                                    amountPaid: log[0].details.amount,
+                                    qty: log[0].details.qty,
+                                    walletAddress: log[0].details.walletAddress,
+                                    referredBy: log[0].details.referredBy || "",
+                                })
+                            })
+
+                    } else if (data.status == 'mismatch') {
+
+                        // const text = data.comment;
+                        // const split1 = text.split('(')
+                        // const split2 = split1[1].split('USD')
+                        // let overpaidAmount = parseFloat(split2[0])
+                        // newAmount = parseFloat(parseFloat(data.source_amount));
+                        console.log(parseFloat(parseFloat(data.source_amount)));
+
+                    }
+                    else {
+                        throw new Error('INVALID STATUS!')
+                    }
+                }
+
+                res.writeHead(200);
+                res.end('This is a correct JSON callback');
+
+            })
+
+
+    } catch (error) {
+        console.log(error);
+        res.writeHead(422);
+        res.end('Incorrect data 1');
+    }
+}
+
+
+const buyPackage = async (body) => {
+    console.log("- = - = - = - = - = - = - = - = - = -");
+    console.log("- = - = - =  BUY PACKAGE - = - = - =");
+    console.log("- = - = - = - = - = - = - = - = - = -");
+
+    console.log("body", body);
+
+    const packageData = {
+        _id: body.packageID,
+        amountPaid: body.amountPaid,
+        qty: body.qty,
+    }
+
+    const walletAddress = body.walletAddress
+    const referredBy = body.referredBy
+
+    try {
+
+        validateAll(packageData._id, 'id')
+        validateAll(packageData.amountPaid, 'amountPaid')
+        validateAll(packageData.qty, 'qty')
+        validateAll(walletAddress, "Wallet Address")
+
+
+        let user = await getSingleUserService({ walletAddress: walletAddress });
+
+        if (!user) {
+            user = {}
+        }
+
+        console.log("user", user);
+
+        if (referredBy == user?.referralCode) throw "You Cannot Buy With Your Own Referral Code"
+
+        let sponsor;
+
+        if (referredBy) {
+            sponsor = await getSingleUserService({ referralCode: referredBy });
+            validateAll(sponsor, null, "Invalid Referral Code")
+
+            let ifSponsorAlreadyInUser = [];
+        }
+
+        if (typeof user._id != "undefined" && user._id != null && user._id != "") {
+            await updateUserService({ walletAddress }, user)
+
+        } else {
+            const uid = new ShortUniqueId({ length: 7 });
+            user.walletAddress = walletAddress;
+            user.referralCode = uid.rnd();
+
+            if (sponsor) {
+                console.log(sponsor);
+                let duplicateSponsorReferredBy = [];
+                if (sponsor.referredBy.length > 0) {
+
+                    function deepCopyArray(arr) {
+                        return arr.map(item => {
+                            if (Array.isArray(item)) {
+                                // If the item is an array, recursively deep copy it
+                                return deepCopyArray(item);
+                            } else if (typeof item === 'object' && item !== null) {
+                                // If the item is an object, deep copy it
+                                return { ...item };
+                            } else {
+                                // If the item is a primitive value, return it as is
+                                return item;
+                            }
+                        });
+                    }
+
+                    duplicateSponsorReferredBy = deepCopyArray(sponsor.referredBy);
+                    duplicateSponsorReferredBy.forEach(element => {
+                        element.sponsorComission = 0
+                    });
+                }
+                user.referredBy = [{ sponsorID: sponsor._id.toString(), sponsorComission: 0 }, ...duplicateSponsorReferredBy]
+            }
+
+            user = await createUserService(user)
+        }
+
+
+
+        if (sponsor) {
+            const ifUserAlreadyInSponsor = sponsor.referredTo.find(obj => obj.affiliate == user._id)
+
+            if (!ifUserAlreadyInSponsor) {
+                sponsor.referredTo = [{ affiliate: user._id.toString() }, ...sponsor.referredTo]
+                await updateUserService({ _id: sponsor._id }, sponsor)
+            }
+        }
+
+
+        const comissionLevels = await getComissionLevelService({ isActive: true })
+        validateAll(comissionLevels, null, "Comission Level Not Found!")
+
+        const totalComissionLevels = comissionLevels.length;
+        const foundPackage = await getSinglePackageService({ _id: packageData._id })
+
+
+        if (foundPackage) {
+            if (packageData.amountPaid != (foundPackage.price * packageData.qty)) throw `Amount To Be Paid is $${foundPackage.price * packageData.qty}, You Paid $${packageData.amountPaid}.`
+            if (foundPackage.stockQty < packageData.qty) throw `Package Out Of Stock!`
+
+
+            // UPDATING PACKAGE
+            const updatedPackageData = {
+                _id: foundPackage._id,
+                stockQty: foundPackage.stockQty - packageData.qty
+            }
+
+            await updatePackageService({ _id: foundPackage._id }, updatedPackageData)
+
+            // CALCULATING COMISSION
+            let totalFees;
+            const limitForRecursive = user.referredBy.length > totalComissionLevels ? totalComissionLevels : user.referredBy.length;
+
+
+            if (user.referredBy.length > 0) {
+                async function comissionCalculateAndUpdateSponsor(limit, i = 0) {
+                    if (i < limit) {
+                        totalFees = (comissionLevels[i].fees / 100) * packageData.amountPaid
+
+                        if (user.referredBy[i]) {
+                            await updateUserService({ _id: user.referredBy[i].sponsorID }, { $inc: { comission: totalFees, totalComission: totalFees } });
+
+                            console.log(user.referredBy[i].sponsorComission, 'before');
+                            if (user.referredBy[i].sponsorComission) {
+                                user.referredBy[i].sponsorComission += totalFees
+
+                            } else {
+                                console.log(user.referredBy[i].sponsorComission, 'no sponsorComission');
+                                user.referredBy[i].sponsorComission = totalFees
+
+                            }
+
+                            console.log(user.referredBy[i].sponsorComission, 'after');
+                            await createCommissionLogService({ userID: user.referredBy[i].sponsorID, affiliateWalletAddress: user.walletAddress, affiliateID: user._id, amount: totalFees })
+                        }
+
+                        comissionCalculateAndUpdateSponsor(limit, i + 1)
+
+                    } else {
+                        // UPDATING USER    
+                        if (user.NFTs.length > 0) {
+
+                            let packageIndex;
+                            let filteredPackage = user.NFTs.find((obj, i) => {
+                                if ((obj.packageID).toString() == (foundPackage._id).toString()) {
+                                    packageIndex = i;
+                                    return obj
+                                }
+                            })
+
+                            if (filteredPackage) {
+                                user.NFTs[packageIndex].qty = user.NFTs[packageIndex].qty + packageData.qty;
+
+                            } else {
+                                user.NFTs = [...user.NFTs, { packageID: foundPackage._id, qty: packageData.qty }]
+
+                            }
+
+                        } else {
+                            user.NFTs = [...user.NFTs, { packageID: foundPackage._id, qty: packageData.qty }]
+
+                        }
+
+                        await updateUserService({ _id: user._id }, user)
+
+                        // CREATING LOG
+                        // await createLogService({ userID: user._id, action: 'buy', details: { walletAddress: user.walletAddress, amount: packageData.amountPaid, qty: packageData.qty, packageID: updatedPackageData._id, status: "deposited" } })
+                        return 'Transaction Sucessfull'
+                    }
+                }
+
+                await comissionCalculateAndUpdateSponsor(limitForRecursive)
+
+            } else {
+
+                if (user.NFTs.length > 0) {
+                    let packageIndex;
+                    let filteredPackage = user.NFTs.find((obj, i) => {
+                        if ((obj.packageID).toString() == (foundPackage._id).toString()) {
+                            packageIndex = i;
+                            return obj
+                        }
+                    })
+
+                    if (filteredPackage) {
+                        user.NFTs[packageIndex].qty = user.NFTs[packageIndex].qty + packageData.qty;
+
+                    } else {
+                        user.NFTs = [...user.NFTs, { packageID: foundPackage._id, qty: packageData.qty }]
+
+                    }
+
+                } else {
+                    user.NFTs = [...user.NFTs, { packageID: foundPackage._id, qty: packageData.qty }]
+
+                }
+
+                await updateUserService({ _id: user._id }, user)
+
+
+                // CREATING LOG
+                // await createLogService({ userID: user._id, action: 'buy', details: { walletAddress: user.walletAddress, amount: packageData.amountPaid, qty: packageData.qty, packageID: updatedPackageData._id, status: "deposited" } })
+                return 'Transaction Sucessfull'
+            }
+
+        } else {
+            throw "invalid package"
+
+        }
+
+    } catch (error) {
+        console.log(error);
+        return error;
+
+    }
+}
+
+
+const getPackages = async (req, res) => {
+
+    try {
+        const data = await getPackagesService();
+        return res.json({ success: true, message: data })
+
+    } catch (error) {
+        console.error(error);
+        return res.status(400).json({ success: false, message: error })
+    }
+
+
+}
+
+
+const getSinglePackage = async (req, res) => {
+    let query = {}
+
+    if (req.query.id) query = { ...query, "_id": parseInt(req.query.id) }
+    console.log(query);
+
+    try {
+        const data = await getSinglePackageService(query);
+        return res.json({ success: true, message: data })
+
+    } catch (error) {
+        console.error(error);
+        return res.status(400).json({ success: false, message: error })
+    }
+}
+
+
+const createPackage = async (req, res) => {
+    const packagesCount = await countPackagesService()
+
+    const packageData = {
+        _id: packagesCount,
+        name: req.body.packageName,
+        price: req.body.packagePrice,
+        stockQty: req.body.packageQuantity,
+        description: req.body.packageDescription,
+        URI: req.body.packageURI
+    }
+
+
+    try {
+        validateAll(packageData.name, 'Package Name')
+        validateAll(packageData.price, 'Package Price')
+        validateAll(packageData.stockQty, 'Package Quantity')
+        validateAll(packageData.description, 'Package Description')
+        validateAll(packageData.URI, 'Package URI')
+
+
+        const foundPackage = await getSinglePackageService({ name: packageData.name })
+
+        if (foundPackage) {
+            throw "Package Already Exists"
+        }
+
+
+        await createPackageService(packageData)
+
+        response = { success: true, message: "Package Created Successfully" }
+
+        return res.json(response)
+
+    } catch (error) {
+        console.error(error);
+        return res.status(400).json({ success: false, message: error })
+    }
+}
+
+
+const editPackage = async (req, res) => {
+    const packageData = {
+        _id: req.body.packageID,
+        name: req.body.packageName,
+        price: req.body.packagePrice,
+        stockQty: req.body.packageQuantity,
+        description: req.body.packageDescription,
+        URI: req.body.packageURI
+    }
+
+    try {
+        validateAll(packageData._id, 'Package ID')
+        validateAll(packageData.name, 'Package Name')
+        validateAll(packageData.price, 'Package Price')
+        validateAll(packageData.stockQty, 'Package Quantity')
+        validateAll(packageData.description, 'Package Description')
+        validateAll(packageData.URI, 'Package URI')
+
+        await updatePackageService({ _id: packageData._id }, packageData)
+
+        response = { success: true, message: "Package Updated Successfully" }
+        return res.json(response)
+
+    } catch (error) {
+        console.error(error);
+        return res.status(400).json({ success: false, message: error })
+    }
+}
+
+
+const verifyUser = async (req, res) => {
+
+    const packageData = {
+        _id: req.body._id,
+        qty: req.body.qty,
+    }
+
+    const walletAddress = req.body.walletAddress
+
+    try {
+        validateAll(packageData._id, 'id')
+        validateAll(packageData.qty, 'qty')
+        validateAll(walletAddress, "Wallet Address")
+
+        let user = await getSingleUserService({ walletAddress: walletAddress });
+        let response = {};
+
+        if (user) {
+            let sponsor;
+
+            if (user.referredBy.length > 0) {
+                sponsor = await getSingleUserService({ _id: user.referredBy[0].sponsorID });
+                let sponsorReferralCode = sponsor.referralCode;
+                response = { success: true, message: 'User Found', user, sponsorReferralCode }
+
+            } else {
+                response = { success: true, message: 'User Found', user, sponsorReferralCode: null }
+
+            }
+
+        } else {
+            response = { success: true, message: 'User Not Found', user: null, sponsorReferralCode: null }
+        }
+
+        return res.json(response)
+
+    } catch (error) {
+        console.log(error);
+        return res.status(400).json({ success: false, message: error })
+    }
+}
+
+
+
+module.exports = {
+    getPackages,
+    createPackage,
+    buyPackage,
+    verifyUser,
+    createInvoice,
+    plisioWebhook,
+    getSinglePackage,
+    editPackage,
+}
