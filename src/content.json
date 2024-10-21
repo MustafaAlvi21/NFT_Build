@@ -1,0 +1,150 @@
+{
+    "presale": {
+        "text1": "Be among the first to seize our launch packages and multiply your rewards.",     
+        "text2": "Get your hands on exclusive Clonely Access NFTs!",
+        "text3": "Starting at just",
+        "text4": "USDT 50"
+    },
+    "hurryup": {
+        "text1": "to get your access NFT for free life time access!!!"
+    },
+    "countdown": {
+        "time": "November 11, 2024 11:11:00"
+    },
+    "secure_your_spot_now": {
+        "link": "/packages"
+    },
+    "EXPERIENCE_PERSONALIZED": {
+        "text1": "EXPERIENCE PERSONALIZED CONNECTIONS",
+        "text2": "WITH clonely",
+        "text3": "Interact with clones of your favorite actors. Make them your fling or your playmate, tailored to your preferences for an engaging experience",
+        "text4": "Are you ready to explore",
+        "text5": "this virtual passionate escapade?",
+        "link": "/packages"
+    },
+    "dive_deeper": {
+        "heading1": "Dive deeper into clonely",
+        "heading2": "product tiers",
+        "FLING": {
+            "heading": "FLING",
+            "text1": "Your everyday companion againstloneliness.",
+            "text2": "You can talk like with a real girlfriend, and she is learning about you and growing with you.",
+            "text3": "She can detect your emotions from your voice and take your mood into account in all your interactions."
+        },
+        "PLAYMATE": {
+            "heading": "PLAYMATE",
+            "text1": "All features of a girlfriend, plus full virtual sexual pleasure.",
+            "text2": "The clone will perform any sexual action the user asks, and the user can buy toys and accessories for the clone.",
+            "text3": "Additionally, it will perform dirty talk and engage in a sexual way."
+        }
+    },
+    "before_features_section": {
+        "card1": {
+            "text1": "CLONELY SEXTOYS",
+            "text2": "MARKETPLACE",
+            "text3": "COMING SOON",
+            "link": "#"
+        },
+        "card2": {
+            "text1": "CLONELY",
+            "text2": "MODELS",
+            "text3": "COMING SOON",
+            "link": "#"
+        },
+        "card3": {
+            "text1": "CLONELY",
+            "text2": "SCENES ​SNAPS",
+            "text3": "COMING SOON",
+            "link": "#"
+        }
+    },
+    "features": {
+        "heading1": "MONETIZATION",
+        "text1_1": "24/7 monetization",
+        "text1_2": "through subscriptions",
+        "heading2": "USER",
+        "text2_1": "Clone can perform everything",
+        "text2_2": "the user asks in real time",
+        "heading3": "PRIVACY",
+        "text3_1": "All user input is private and only saved on his device, not on the servers",
+        "heading4_1": "USERS",
+        "heading4_2": "PREFERENCES",
+        "text4": "Clone remembers the users preferences and engages with the user proactively",
+        "heading5": "CLONING OF PORN ACTOR",
+        "text5": "Cloning of real actors",
+        "heading6": "VOICE & CHAT",
+        "text6": "Voice and chat interactions with the clones",
+        "heading7": "BODY MOVEMENTS",
+        "text7": "Fully natural face and body movements",
+        "heading8": "MARKET PLACE",
+        "text8": "Buying new locations and accessories for the clone"
+    }, 
+    "technology": {
+        "card1": {
+            "text1": "SERVER BASED",
+            "text2": "PLATFORM",
+            "text3": "WITH RENDER FARM"
+        },
+        "card2": {
+            "text1": "MOBILE APPS AND WEB VIEW FOR INTERACTING WITH THE CLONE"
+        },
+        "card3": {
+            "text1": "LOGIN THROUGH MOBILE SIGNUP OR METAMASK"
+        },
+        "card4": {
+            "text1": "CRYPTO PAYMENT INTEGRATION"
+        },
+        "card5": {
+            "text1": "AI INTEGRATED 3D REAL TIME GRAPHICAL ENGINE"
+        }
+    },
+    "about": {
+        "text1": "Clonely is a platform and app where users can interact with clones of their favorite actor, who will act like real life partners or flings to their subscribers.",
+        "text2": "The clones are learning the preferences of the user for an ever-engaging connection and daily surprises."
+    },
+    "roadmap": {
+        "card1": {
+            "text1": "Q2/24",
+            "text2": "Development Start",
+            "text3": "Set up team and project",
+            "text4": "Start backend development",
+            "text5": "Start frontend development"
+        },
+        "card2": {
+            "text1": "21 OCTOBER 24",
+            "text2": "NFT Sale Start",
+            "text3": "Targeted Marketing on all possible channels",
+            "text4": "Launch sales platform",
+            "text5": "Partnerships with actors and ambassadors"
+        },
+        "card3": {
+            "text1": "Q2/25",
+            "text2": "Platform Beta Test",
+            "text3": "Premium NFT holders can test the platform Product"
+        },
+        "card4": {
+            "text1": "Q3/25",
+            "text2": "Product launch with massive launch event",
+            "text3": "Product marketing starts for attracting users to Clonely"
+        },
+        "card5": {
+            "text1": "Q4/25",
+            "text2": "TGE and launch on several DEX and CEX",
+            "text3": "NFT Airdrops"
+        }
+    },
+    "term": {
+        "link": "https://google.com"
+    },
+    "mlm": {
+        "step1": {
+            "text": "Create your affialiate link or QR code"
+        },
+        "step2": {
+            "text": "Share your affialiate link with your friends and partners"
+        },
+        "step3": {
+            "text": "Enjoy the Benefits of our unique affiliate system"
+        }
+    }
+}
